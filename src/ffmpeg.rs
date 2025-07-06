@@ -12,7 +12,7 @@ pub fn spawn_frame_reader(path: &str) -> io::Result<ChildStdout> {
     Ok(child.stdout.take().unwrap())
 }
 
-pub fn spawn_child_writer(
+pub fn spawn_child_frame_writer(
     width: i32,
     height: i32,
     frame_rate: f32,
