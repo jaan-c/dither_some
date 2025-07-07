@@ -41,12 +41,12 @@ impl Frame {
     }
 
     pub fn get_rgb(&self, x: isize, y: isize) -> Option<RgbPixel> {
-        let ix = self.coordinate_to_index(x, y) * 3;
-        if 0 <= ix && ix < self.data.len() as isize {
+        let i = self.coordinate_to_index(x, y) * 3;
+        if self.is_index_valid(i) {
             Some((
-                self.data[ix as usize],
-                self.data[(ix + 1) as usize],
-                self.data[(ix + 2) as usize],
+                self.data[i as usize],
+                self.data[(i + 1) as usize],
+                self.data[(i + 2) as usize],
             ))
         } else {
             None
@@ -62,12 +62,12 @@ impl Frame {
     }
 
     pub fn set_rgb(&mut self, x: isize, y: isize, new_rgb: RgbPixel) -> bool {
-        let ix = self.coordinate_to_index(x, y) * 3;
-        if 0 <= ix && ix < self.data.len() as isize {
+        let i = self.coordinate_to_index(x, y) * 3;
+        if self.is_index_valid(i) {
             let (r, g, b) = new_rgb;
-            self.data[ix as usize] = r;
-            self.data[(ix + 1) as usize] = g;
-            self.data[(ix + 2) as usize] = b;
+            self.data[i as usize] = r;
+            self.data[(i + 1) as usize] = g;
+            self.data[(i + 2) as usize] = b;
 
             true
         } else {
@@ -91,6 +91,10 @@ impl Frame {
         for (i, v) in self.data.iter().enumerate() {
             buffer[i] = v.clamp(0.0, 255.0) as u8;
         }
+    }
+
+    fn is_index_valid(&self, index: isize) -> bool {
+        0 <= index && index < self.data.len() as isize
     }
 
     fn coordinate_to_index(&self, x: isize, y: isize) -> isize {
