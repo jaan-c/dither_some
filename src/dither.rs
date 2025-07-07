@@ -1,12 +1,12 @@
 use crate::frame::Frame;
 
-pub fn dither_frame_atkinson(frame: &mut Frame) {
+pub fn dither_frame_atkinson(frame: &mut Frame, palette_count: i32) {
     let pixel_offsets = [(1, 0), (2, 0), (-1, 1), (0, 1), (1, 1), (0, 2)];
 
     for y in 0..frame.height {
         for x in 0..frame.width {
             let pixel = frame.get_gray(x, y).unwrap();
-            let quantized = { if pixel < 128.0 { 0.0 } else { 255.0 } };
+            let quantized = quantize(pixel, palette_count);
             let error = pixel - quantized;
             let eight_error = error * (1.0 / 8.0);
 
@@ -23,16 +23,16 @@ pub fn dither_frame_atkinson(frame: &mut Frame) {
     }
 }
 
-pub fn dither_frame_floyd_steinberd_color(frame: &mut Frame) {
+pub fn dither_frame_floyd_steinberd_color(frame: &mut Frame, palete_count: i32) {
     let pixel_offsets = [(1, 0), (-1, 1), (0, 1), (1, 1)];
     let error_coef = [7.0 / 16.0, 3.0 / 16.0, 5.0 / 16.0, 1.0 / 16.0];
 
     for y in 0..frame.height {
         for x in 0..frame.width {
             let (r, g, b) = frame.get_rgb(x, y).unwrap();
-            let quantized_r = quantize_8(r);
-            let quantized_g = quantize_8(g);
-            let quantized_b = quantize_8(b);
+            let quantized_r = quantize(r, palete_count);
+            let quantized_g = quantize(g, palete_count);
+            let quantized_b = quantize(b, palete_count);
 
             frame.set_rgb(x, y, (quantized_r, quantized_g, quantized_b));
 
@@ -55,8 +55,8 @@ pub fn dither_frame_floyd_steinberd_color(frame: &mut Frame) {
     }
 }
 
-fn quantize_8(color: f32) -> f32 {
-    let gap = 255.0 / 7.0;
+fn quantize(color: f32, palette_count: i32) -> f32 {
+    let gap = 255.0 / (palette_count - 1) as f32;
 
     (color.clamp(0.0, 255.0) / gap).round() * gap
 }
