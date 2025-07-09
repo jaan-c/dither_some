@@ -35,10 +35,13 @@ impl Frame {
             );
         }
 
+        let mut data = Vec::with_capacity(buffer.len());
+        data.extend(buffer.iter().map(|&n| n as f32));
+
         Frame {
             width: width,
             height: height,
-            data: buffer.iter().map(|n| *n as f32).collect(),
+            data: data,
         }
     }
 
