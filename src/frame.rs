@@ -88,8 +88,8 @@ impl Frame {
             );
         }
 
-        for (i, v) in self.data.iter().enumerate() {
-            buffer[i] = v.clamp(0.0, 255.0) as u8;
+        for (i, &v) in self.data.iter().enumerate() {
+            buffer[i] = v as u8;
         }
     }
 
