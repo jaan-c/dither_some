@@ -48,11 +48,8 @@ impl Frame {
     pub fn get_rgb(&self, x: isize, y: isize) -> Option<RgbPixel> {
         let i = self.coordinate_to_index(x, y);
         if self.is_index_valid(i) {
-            Some((
-                self.data[i as usize],
-                self.data[(i + 1) as usize],
-                self.data[(i + 2) as usize],
-            ))
+            let i = i as usize;
+            Some((self.data[i], self.data[i + 1], self.data[i + 2]))
         } else {
             None
         }
@@ -69,10 +66,11 @@ impl Frame {
     pub fn set_rgb(&mut self, x: isize, y: isize, new_rgb: RgbPixel) -> bool {
         let i = self.coordinate_to_index(x, y);
         if self.is_index_valid(i) {
+            let i = i as usize;
             let (r, g, b) = new_rgb;
-            self.data[i as usize] = r;
-            self.data[(i + 1) as usize] = g;
-            self.data[(i + 2) as usize] = b;
+            self.data[i] = r;
+            self.data[i + 1] = g;
+            self.data[i + 2] = b;
 
             true
         } else {
