@@ -1,6 +1,8 @@
 pub type GrayPixel = f32;
 pub type RgbPixel = (f32, f32, f32);
 
+/// Stores frame data in a flat Vec, represented like RGB24, but uses f32
+/// instead of 8 bits per channel to allow overflow for error diffusion.
 pub struct Frame {
     pub width: isize,
     pub height: isize,
@@ -41,7 +43,7 @@ impl Frame {
     }
 
     pub fn get_rgb(&self, x: isize, y: isize) -> Option<RgbPixel> {
-        let i = self.coordinate_to_index(x, y) * 3;
+        let i = self.coordinate_to_index(x, y);
         if self.is_index_valid(i) {
             Some((
                 self.data[i as usize],
@@ -62,7 +64,7 @@ impl Frame {
     }
 
     pub fn set_rgb(&mut self, x: isize, y: isize, new_rgb: RgbPixel) -> bool {
-        let i = self.coordinate_to_index(x, y) * 3;
+        let i = self.coordinate_to_index(x, y);
         if self.is_index_valid(i) {
             let (r, g, b) = new_rgb;
             self.data[i as usize] = r;
@@ -98,6 +100,6 @@ impl Frame {
     }
 
     fn coordinate_to_index(&self, x: isize, y: isize) -> isize {
-        y * self.width + x
+        (y * self.width + x) * 3
     }
 }
