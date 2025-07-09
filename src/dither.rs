@@ -24,8 +24,12 @@ pub fn dither_frame_atkinson(frame: &mut Frame, palette_count: i32) {
 }
 
 pub fn dither_frame_floyd_steinberd_color(frame: &mut Frame, palete_count: i32) {
-    let pixel_offsets = [(1, 0), (-1, 1), (0, 1), (1, 1)];
-    let error_coef = [7.0 / 16.0, 3.0 / 16.0, 5.0 / 16.0, 1.0 / 16.0];
+    let offset_coef = [
+        ((1, 0), 7.0 / 16.0),
+        ((-1, 1), 3.0 / 16.0),
+        ((0, 1), 5.0 / 16.0),
+        ((1, 1), 1.0 / 16.0),
+    ];
 
     for y in 0..frame.height {
         for x in 0..frame.width {
@@ -40,7 +44,7 @@ pub fn dither_frame_floyd_steinberd_color(frame: &mut Frame, palete_count: i32) 
             let err_g = g - quantized_g;
             let err_b = b - quantized_b;
 
-            for ((ox, oy), coef) in pixel_offsets.iter().zip(error_coef) {
+            for ((ox, oy), coef) in offset_coef {
                 let nx = x + ox;
                 let ny = y + oy;
                 if let Some((r, g, b)) = frame.get_rgb(nx, ny) {
