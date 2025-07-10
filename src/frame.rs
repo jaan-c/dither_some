@@ -49,7 +49,16 @@ impl Frame {
         let i = self.coordinate_to_index(x, y);
         if self.is_index_valid(i) {
             let i = i as usize;
-            Some((self.data[i], self.data[i + 1], self.data[i + 2]))
+
+            // This is safe since we already checked index validity; each pixel
+            // occupies 3 slots in self.data, if i is safe, i+1 and i+2 is safe.
+            unsafe {
+                Some((
+                    *self.data.get_unchecked(i),
+                    *self.data.get_unchecked(i + 1),
+                    *self.data.get_unchecked(i + 2),
+                ))
+            }
         } else {
             None
         }
@@ -68,9 +77,14 @@ impl Frame {
         if self.is_index_valid(i) {
             let i = i as usize;
             let (r, g, b) = new_rgb;
-            self.data[i] = r;
-            self.data[i + 1] = g;
-            self.data[i + 2] = b;
+
+            // This is safe since we already checked index validity; each pixel
+            // occupies 3 slots in self.data, if i is safe, i+1 and i+2 is safe.
+            unsafe {
+                *self.data.get_unchecked_mut(i) = r;
+                *self.data.get_unchecked_mut(i + 1) = g;
+                *self.data.get_unchecked_mut(i + 2) = b;
+            }
 
             true
         } else {
