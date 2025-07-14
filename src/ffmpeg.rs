@@ -85,3 +85,39 @@ pub fn get_video_info(path: &str) -> Result<(i32, i32, f32), String> {
 
     Ok((width, height, frame_rate))
 }
+
+/// Copies src_video and src_audio's corresponding streams to dest, but if
+/// FFmpeg fails, it tries to transcode the audio to AAC.
+///
+/// AAC because it's widely used audio encoding for MP4, and I'm assuming that's
+/// the only container we're working with now.
+pub fn copy_streams_or_aac_transcode_audio(
+    src_video: &str,
+    src_audio: &str,
+    dest: &str,
+) -> Result<(), String> {
+    let status = Command::new("ffmpeg")
+        .args(&[
+            "-v", "error", "-i", src_video, "-i", src_audio, "-c:v", "copy", "-c:a", "copy",
+            "-map", "0:v:0", "-map", "1:a:0", "-n", dest,
+        ])
+        .status()
+        .map_err(|e| format!("Failed to start ffmpeg: {}", e))?;
+
+    if !status.success() {
+        let output = Command::new("ffmpeg")
+            .args(&[
+                "-v", "error", "-i", src_video, "-i", src_audio, "-c:v", "copy", "-c:a", "copy",
+                "-map", "0:v:0", "-map", "1:a:0", "-n", dest,
+            ])
+            .output()
+            .map_err(|e| format!("Failed to start fallback ffmpeg: {}", e))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(format!("Fallback ffmpeg failed: {}", stderr));
+        }
+    }
+
+    Ok(())
+}
