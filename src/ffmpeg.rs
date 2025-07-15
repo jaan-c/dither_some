@@ -36,6 +36,7 @@ pub fn spawn_child_frame_writer(
             "libx264",
             "-pix_fmt",
             "yuv420p",
+            "-n",
             out_path,
         ])
         .stdin(Stdio::piped())
