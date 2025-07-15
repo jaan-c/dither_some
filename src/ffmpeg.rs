@@ -9,7 +9,7 @@ pub fn spawn_frame_reader(path: &str) -> io::Result<ChildStdout> {
         .stdout(Stdio::piped())
         .spawn()?;
 
-    Ok(child.stdout.take().unwrap())
+    Ok(child.stdout.take().expect("Expected stdout is present"))
 }
 
 pub fn spawn_child_frame_writer(
