@@ -39,7 +39,7 @@ enum Algorithm {
 
 fn main() {
     let args = Args::parse();
-    let temp_dest = &format!("dither_some_{}", args.output);
+    let temp_output = &format!("dither_some_{}", args.output);
 
     let (width, height, frame_rate) = ffmpeg::get_video_info(&args.input).unwrap();
 
@@ -48,7 +48,7 @@ fn main() {
 
     let mut frame_reader = ffmpeg::spawn_frame_reader(&args.input).unwrap();
     let mut frame_writer_child =
-        ffmpeg::spawn_child_frame_writer(width, height, frame_rate, temp_dest).unwrap();
+        ffmpeg::spawn_child_frame_writer(width, height, frame_rate, temp_output).unwrap();
     let mut frame_writer = frame_writer_child.stdin.take().unwrap();
 
     loop {
@@ -73,7 +73,7 @@ fn main() {
         }
     }
 
-    let result = copy_streams_or_aac_transcode_audio(&temp_dest, &args.input, &args.output);
-    fs::remove_file(temp_dest).ok();
+    let result = copy_streams_or_aac_transcode_audio(&temp_output, &args.input, &args.output);
+    fs::remove_file(temp_output).ok();
     result.unwrap();
 }
