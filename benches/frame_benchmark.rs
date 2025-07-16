@@ -17,5 +17,19 @@ fn frame_set_benchmark(c: &mut Criterion) {
     });
 }
 
-criterion_group!(frame_benchmark, frame_get_benchmark, frame_set_benchmark);
+fn frame_to_rgb24_bytes(c: &mut Criterion) {
+    let frame = Frame::new(1920, 1080);
+    let mut buf = vec![0u8; 1920 * 1080 * 3];
+
+    c.bench_function("frame_to_rgb24_bytes", |b| {
+        b.iter(|| frame.to_rgb24_bytes(black_box(&mut buf)))
+    });
+}
+
+criterion_group!(
+    frame_benchmark,
+    frame_get_benchmark,
+    frame_set_benchmark,
+    frame_to_rgb24_bytes
+);
 criterion_main!(frame_benchmark);
