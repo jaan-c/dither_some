@@ -60,7 +60,6 @@ fn main() {
                 Algorithm::FsColor => {
                     dither_frame_floyd_steinberd_color(&mut frame, args.palette_count)
                 }
-                _ => panic!("Unhandled algorithm."),
             }
 
             frame.to_rgb24_bytes(&mut frame_buf);
