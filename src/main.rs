@@ -1,7 +1,6 @@
 use clap::{Parser, ValueEnum};
 use std::fs;
 use std::io::{Read, Write};
-use std::panic;
 
 use crate::dither::{dither_frame_atkinson, dither_frame_floyd_steinberd_color};
 use crate::ffmpeg::copy_streams_or_aac_transcode_audio;
