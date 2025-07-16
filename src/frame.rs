@@ -96,17 +96,19 @@ impl Frame {
         self.set_rgb(x, y, (new_gray, new_gray, new_gray))
     }
 
-    pub fn to_rgb24_bytes(&self, buffer: &mut [u8]) {
-        if buffer.len() != self.data.len() {
+    pub fn to_rgb24_bytes(&self, dest: &mut [u8]) {
+        if dest.len() != self.data.len() {
             panic!(
                 "expecting slice size {} got {}",
                 self.data.len(),
-                buffer.len()
+                dest.len()
             );
         }
 
-        for (i, &v) in self.data.iter().enumerate() {
-            buffer[i] = v as u8;
+        for i in 0..self.data.len() {
+            unsafe {
+                *dest.get_unchecked_mut(i) = *self.data.get_unchecked(i) as u8;
+            }
         }
     }
 
