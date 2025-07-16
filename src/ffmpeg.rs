@@ -1,23 +1,55 @@
-use std::io;
+use std::io::{Read, Write};
 use std::process::{Child, ChildStdout, Command, Stdio};
 
-pub fn spawn_frame_reader(path: &str) -> io::Result<ChildStdout> {
+pub fn dither_frames_with<F>(input: &str, output: &str, dither_fn: F) -> Result<(), String>
+where
+    F: Fn(usize, usize, &mut [u8]),
+{
+    let (width, height, frame_rate) = get_video_info(input)?;
+
+    let mut frame_buf = vec![0u8; width * height * 3]; // *3 for RGB24
+    let mut frame_reader = spawn_frame_reader(input)?;
+    let mut frame_writer_child = spawn_frame_writer_child(width, height, frame_rate, output)?;
+    let mut frame_writer = frame_writer_child
+        .stdin
+        .take()
+        .expect("Expected stdin to be present");
+
+    loop {
+        if let Ok(_) = frame_reader.read_exact(&mut frame_buf) {
+            dither_fn(width, height, &mut frame_buf);
+            frame_writer
+                .write_all(&frame_buf)
+                .map_err(|e| format!("Writing frame buffer failed: {}", e))?;
+        } else {
+            // EOF, signal to ffmpeg we're done so it can properly finalize the output.
+            drop(frame_writer);
+            frame_writer_child.wait().unwrap();
+            break;
+        }
+    }
+
+    Ok(())
+}
+
+fn spawn_frame_reader(path: &str) -> Result<ChildStdout, String> {
     let mut child = Command::new("ffmpeg")
         .args(&[
             "-v", "error", "-i", path, "-f", "rawvideo", "-pix_fmt", "rgb24", "-",
         ])
         .stdout(Stdio::piped())
-        .spawn()?;
+        .spawn()
+        .map_err(|e| format!("ffmpeg frame reader failed to start: {}", e))?;
 
-    Ok(child.stdout.take().expect("Expected stdout is present"))
+    Ok(child.stdout.take().expect("Expected stdout to be present"))
 }
 
-pub fn spawn_child_frame_writer(
-    width: i32,
-    height: i32,
+fn spawn_frame_writer_child(
+    width: usize,
+    height: usize,
     frame_rate: f32,
-    out_path: &str,
-) -> io::Result<Child> {
+    path: &str,
+) -> Result<Child, String> {
     let child = Command::new("ffmpeg")
         .args(&[
             "-v",
@@ -37,16 +69,17 @@ pub fn spawn_child_frame_writer(
             "-pix_fmt",
             "yuv420p",
             "-n",
-            out_path,
+            path,
         ])
         .stdin(Stdio::piped())
-        .spawn()?;
+        .spawn()
+        .map_err(|e| format!("ffmpeg frame writer failed to start: {}", e))?;
 
     Ok(child)
 }
 
 /// Get width, height and frame rate of a video.
-pub fn get_video_info(path: &str) -> Result<(i32, i32, f32), String> {
+fn get_video_info(path: &str) -> Result<(usize, usize, f32), String> {
     let output = Command::new("ffprobe")
         .args(&[
             "-v",
@@ -70,17 +103,20 @@ pub fn get_video_info(path: &str) -> Result<(i32, i32, f32), String> {
             .unwrap_or("SIGNAL".to_string());
         let stderr = String::from_utf8_lossy(&output.stderr);
 
-        return Err(format!("ffprobe exited with {}\n{}", reason, stderr));
+        return Err(format!("ffprobe exited with {}: {}", reason, stderr));
     }
 
     let stdout = str::from_utf8(&output.stdout)
         .map_err(|e| format!("ffprobe yielded an invalid UTF-8 output: {}", e))?;
     let lines: Vec<&str> = stdout.lines().collect();
-    let width: i32 = lines[0].parse().unwrap();
-    let height: i32 = lines[1].parse().unwrap();
+    let width: usize = lines[0].parse().map_err(|_| "Parsing width failed")?;
+    let height: usize = lines[1].parse().map_err(|_| "Parsing height failed")?;
     let frame_rate = {
         let parts: Vec<&str> = lines[2].split("/").collect();
-        let (num, denom): (f32, f32) = (parts[0].parse().unwrap(), parts[1].parse().unwrap());
+        let (num, denom): (f32, f32) = (
+            parts[0].parse().map_err(|_| "Parsing frame_rate failed")?,
+            parts[1].parse().map_err(|_| "Parsing frame_rate failed")?,
+        );
         num / denom
     };
 
@@ -103,7 +139,7 @@ pub fn copy_streams_or_aac_transcode_audio(
             "-map", "0:v:0", "-map", "1:a:0", "-n", dest,
         ])
         .status()
-        .map_err(|e| format!("Failed to start ffmpeg: {}", e))?;
+        .map_err(|e| format!("ffmpeg failed to start: {}", e))?;
 
     if !status.success() {
         let output = Command::new("ffmpeg")
@@ -112,11 +148,11 @@ pub fn copy_streams_or_aac_transcode_audio(
                 "-map", "0:v:0", "-map", "1:a:0", "-n", dest,
             ])
             .output()
-            .map_err(|e| format!("Failed to start fallback ffmpeg: {}", e))?;
+            .map_err(|e| format!("ffmpeg fallback failed to start: {}", e))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(format!("Fallback ffmpeg failed: {}", stderr));
+            return Err(format!("ffmpeg fallback failed: {}", stderr));
         }
     }
 
