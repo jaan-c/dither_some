@@ -66,5 +66,5 @@ fn quantize_gap(palette_count: u8) -> f32 {
 }
 
 fn quantize(color: f32, gap: f32) -> f32 {
-    (color / gap).round() * gap
+    (color / gap + 0.5).floor() * gap
 }
