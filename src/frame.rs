@@ -22,10 +22,7 @@ impl<'a> Frame<'a> {
     }
 
     pub fn get_rgb(&self, x: isize, y: isize) -> Option<RgbPixel> {
-        let i = self.coordinate_to_index(x, y);
-        if self.is_index_valid(i) {
-            let i = i as usize;
-
+        if let Some(i) = self.coordinate_to_index(x, y) {
             // This is safe since we already checked index validity; each pixel
             // occupies 3 slots in self.data, if i is safe, i+1 and i+2 is safe.
             unsafe {
@@ -49,9 +46,7 @@ impl<'a> Frame<'a> {
     }
 
     pub fn set_rgb(&mut self, x: isize, y: isize, new_rgb: RgbPixel) -> bool {
-        let i = self.coordinate_to_index(x, y);
-        if self.is_index_valid(i) {
-            let i = i as usize;
+        if let Some(i) = self.coordinate_to_index(x, y) {
             let (r, g, b) = new_rgb;
 
             // This is safe since we already checked index validity; each pixel
@@ -72,13 +67,11 @@ impl<'a> Frame<'a> {
         self.set_rgb(x, y, (new_gray, new_gray, new_gray))
     }
 
-    #[inline]
-    fn is_index_valid(&self, index: isize) -> bool {
-        0 <= index && index < self.data.len() as isize
-    }
-
-    #[inline]
-    fn coordinate_to_index(&self, x: isize, y: isize) -> isize {
-        (y * self.width + x) * 3
+    fn coordinate_to_index(&self, x: isize, y: isize) -> Option<usize> {
+        if 0 <= x && x <= self.width && 0 <= y && y < self.height {
+            Some(((y * self.width + x) * 3) as usize)
+        } else {
+            None
+        }
     }
 }
