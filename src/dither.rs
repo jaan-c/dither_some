@@ -1,14 +1,15 @@
 use crate::frame::Frame;
 
-pub fn dither_frame_atkinson(frame: &mut Frame, palette_count: i32) {
+pub fn dither_frame_atkinson(frame: &mut Frame, palette_count: u8) {
     const PIXEL_OFFSETS: [(isize, isize); 6] = [(1, 0), (2, 0), (-1, 1), (0, 1), (1, 1), (0, 2)];
+    let gap = quantize_gap(palette_count);
 
     for y in 0..frame.height {
         for x in 0..frame.width {
             let pixel = frame.get_gray(x, y).unwrap();
-            let quantized = quantize(pixel, palette_count);
+            let quantized = quantize(pixel, gap);
             let error = pixel - quantized;
-            let eight_error = error * (1.0 / 8.0);
+            let eight_error = error / 8.0;
 
             frame.set_gray(x, y, quantized);
 
@@ -23,20 +24,21 @@ pub fn dither_frame_atkinson(frame: &mut Frame, palette_count: i32) {
     }
 }
 
-pub fn dither_frame_floyd_steinberd_color(frame: &mut Frame, palete_count: i32) {
+pub fn dither_frame_floyd_steinberg_color(frame: &mut Frame, palette_count: u8) {
     const OFFSET_COEF: [((isize, isize), f32); 4] = [
         ((1, 0), 7.0 / 16.0),
         ((-1, 1), 3.0 / 16.0),
         ((0, 1), 5.0 / 16.0),
         ((1, 1), 1.0 / 16.0),
     ];
+    let gap = quantize_gap(palette_count);
 
     for y in 0..frame.height {
         for x in 0..frame.width {
             let (r, g, b) = frame.get_rgb(x, y).unwrap();
-            let quantized_r = quantize(r, palete_count);
-            let quantized_g = quantize(g, palete_count);
-            let quantized_b = quantize(b, palete_count);
+            let quantized_r = quantize(r, gap);
+            let quantized_g = quantize(g, gap);
+            let quantized_b = quantize(b, gap);
 
             frame.set_rgb(x, y, (quantized_r, quantized_g, quantized_b));
 
@@ -59,8 +61,10 @@ pub fn dither_frame_floyd_steinberd_color(frame: &mut Frame, palete_count: i32) 
     }
 }
 
-fn quantize(color: f32, palette_count: i32) -> f32 {
-    let gap = 255.0 / (palette_count - 1) as f32;
+fn quantize_gap(palette_count: u8) -> f32 {
+    255.0 / (palette_count as f32 - 1.0)
+}
 
-    (color.clamp(0.0, 255.0) / gap).round() * gap
+fn quantize(color: f32, gap: f32) -> f32 {
+    (color / gap).round() * gap
 }

@@ -1,7 +1,7 @@
 use clap::{Parser, ValueEnum};
 use std::fs;
 
-use crate::dither::{dither_frame_atkinson, dither_frame_floyd_steinberd_color};
+use crate::dither::{dither_frame_atkinson, dither_frame_floyd_steinberg_color};
 use crate::frame::Frame;
 
 mod dither;
@@ -16,8 +16,8 @@ struct Args {
     algorithm: Algorithm,
 
     /// Restricts palette by specified count.
-    #[arg(short, long, value_parser = clap::value_parser!(i32).range(2..=255))]
-    palette_count: i32,
+    #[arg(short, long, value_parser = clap::value_parser!(u8).range(2..=255))]
+    palette_count: u8,
 
     /// Path of video to dither.
     #[arg(index = 1)]
@@ -39,16 +39,14 @@ fn main() {
     let temp_output = &format!("dither_some_{}", args.output);
 
     ffmpeg::dither_frames_with(&args.input, &temp_output, |width, height, frame_buf| {
-        let mut frame = Frame::from_rgb24_bytes(width as isize, height as isize, &frame_buf);
+        let mut frame = Frame::new(width as isize, height as isize, frame_buf);
 
         match args.algorithm {
             Algorithm::Atkinson => dither_frame_atkinson(&mut frame, args.palette_count),
             Algorithm::FsColor => {
-                dither_frame_floyd_steinberd_color(&mut frame, args.palette_count)
+                dither_frame_floyd_steinberg_color(&mut frame, args.palette_count)
             }
         }
-
-        frame.to_rgb24_bytes(frame_buf);
     })
     .unwrap();
 
