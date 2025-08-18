@@ -76,3 +76,108 @@ impl<'a> Frame<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn new_panics_with_negative_width() {
+        Frame::new(-1, 1, &mut vec![0u8; 3]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn new_panics_with_negative_height() {
+        Frame::new(1, -1, &mut vec![0u8; 3]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn new_panics_with_mismatched_buffer_size() {
+        Frame::new(1, 2, &mut vec![0u8; 12]);
+    }
+
+    #[test]
+    fn get_rgb_returns_correct_pixel() {
+        let mut buf = vec![0u8; 3];
+        let frame = Frame::new(1, 1, &mut buf);
+
+        assert_eq!(frame.get_rgb(0, 0).unwrap(), (0.0, 0.0, 0.0));
+    }
+
+    #[test]
+    fn get_rgb_returns_none_on_out_of_bounds() {
+        let mut buf = vec![0u8; 3];
+        let frame = Frame::new(1, 1, &mut buf);
+
+        assert_eq!(frame.get_rgb(3, 3), None);
+    }
+
+    #[test]
+    fn get_rgb_returns_none_on_negative() {
+        let mut buf = vec![0u8; 3];
+        let frame = Frame::new(1, 1, &mut buf);
+
+        assert_eq!(frame.get_rgb(-1, -1), None);
+    }
+
+    #[test]
+    fn get_gray_returns_correct_value() {
+        let mut buf = vec![0u8; 3];
+        let mut frame = Frame::new(1, 1, &mut buf);
+
+        let (r, g, b) = (100.0, 150.0, 200.0);
+        frame.set_rgb(0, 0, (r, g, b));
+
+        let gray = frame.get_gray(0, 0).unwrap();
+        let expected = 0.299 * r + 0.587 * g + 0.114 * b;
+
+        assert!((gray - expected).abs() < 1e-6);
+    }
+
+    #[test]
+    fn get_gray_returns_none_on_out_of_bounds() {
+        let mut buf = vec![0u8; 3];
+        let frame = Frame::new(1, 1, &mut buf);
+
+        assert_eq!(frame.get_gray(5, 5), None);
+    }
+
+    #[test]
+    fn set_rgb_writes_correct_pixel() {
+        let mut buf = vec![0u8; 3];
+        let mut frame = Frame::new(1, 1, &mut buf);
+
+        let success = frame.set_rgb(0, 0, (10.0, 20.0, 30.0));
+        assert!(success);
+        assert_eq!(frame.get_rgb(0, 0).unwrap(), (10.0, 20.0, 30.0));
+    }
+
+    #[test]
+    fn set_rgb_returns_false_on_out_of_bounds() {
+        let mut buf = vec![0u8; 3];
+        let mut frame = Frame::new(1, 1, &mut buf);
+
+        assert!(!frame.set_rgb(2, 2, (1.0, 1.0, 1.0)));
+    }
+
+    #[test]
+    fn set_gray_writes_correct_pixel() {
+        let mut buf = vec![0u8; 3];
+        let mut frame = Frame::new(1, 1, &mut buf);
+
+        let success = frame.set_gray(0, 0, 128.0);
+        assert!(success);
+        assert_eq!(frame.get_rgb(0, 0).unwrap(), (128.0, 128.0, 128.0));
+    }
+
+    #[test]
+    fn set_gray_returns_false_on_negative_index() {
+        let mut buf = vec![0u8; 3];
+        let mut frame = Frame::new(1, 1, &mut buf);
+
+        assert!(!frame.set_gray(-1, 0, 100.0));
+    }
+}
