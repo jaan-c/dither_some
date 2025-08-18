@@ -1,23 +1,24 @@
 pub type GrayPixel = f32;
 pub type RgbPixel = (f32, f32, f32);
 
-/// A wrapper around \[u8] to manipulate it like an f32 RGB24 matrix.
+/// A wrapper around \[u8] to manipulate it like an f32 RGB24 matrix. f32 values
+/// that don't fit in u8 when set_*, will be clamped.
 pub struct Frame<'a> {
     pub width: isize,
     pub height: isize,
-    data: &'a mut [u8],
+    buffer: &'a mut [u8],
 }
 
 impl<'a> Frame<'a> {
-    pub fn new(width: isize, height: isize, data: &'a mut [u8]) -> Self {
+    pub fn new(width: isize, height: isize, buffer: &'a mut [u8]) -> Self {
         assert!(width > -1);
         assert!(height > -1);
-        assert!(data.len() == (width * height * 3) as usize);
+        assert!(buffer.len() == (width * height * 3) as usize);
 
         return Frame {
             width: width,
             height: height,
-            data: data,
+            buffer,
         };
     }
 
@@ -27,9 +28,9 @@ impl<'a> Frame<'a> {
             // occupies 3 slots in self.data, if i is safe, i+1 and i+2 is safe.
             unsafe {
                 Some((
-                    *self.data.get_unchecked(i) as f32,
-                    *self.data.get_unchecked(i + 1) as f32,
-                    *self.data.get_unchecked(i + 2) as f32,
+                    *self.buffer.get_unchecked(i) as f32,
+                    *self.buffer.get_unchecked(i + 1) as f32,
+                    *self.buffer.get_unchecked(i + 2) as f32,
                 ))
             }
         } else {
@@ -52,9 +53,9 @@ impl<'a> Frame<'a> {
             // This is safe since we already checked index validity; each pixel
             // occupies 3 slots in self.data, if i is safe, i+1 and i+2 is safe.
             unsafe {
-                *self.data.get_unchecked_mut(i) = r as u8;
-                *self.data.get_unchecked_mut(i + 1) = g as u8;
-                *self.data.get_unchecked_mut(i + 2) = b as u8;
+                *self.buffer.get_unchecked_mut(i) = r as u8;
+                *self.buffer.get_unchecked_mut(i + 1) = g as u8;
+                *self.buffer.get_unchecked_mut(i + 2) = b as u8;
             }
 
             true

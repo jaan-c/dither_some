@@ -1,15 +1,19 @@
 use criterion::{Criterion, black_box, criterion_group, criterion_main};
-use dither_some::{dither, frame::Frame};
+use dither_some::dither;
 
 fn dither_atkinson_benchmark(c: &mut Criterion) {
     let width = 1920;
     let height = 1080;
     let mut buf = vec![0u8; (width * height * 3) as usize];
-    let mut frame = Frame::new(width, height, &mut buf);
 
     c.bench_function("dither_atkinson", |b| {
         b.iter(|| {
-            dither::dither_frame_atkinson(black_box(&mut frame), black_box(2));
+            dither::dither_frame_atkinson(
+                black_box(width),
+                black_box(height),
+                black_box(&mut buf),
+                black_box(2),
+            );
         });
     });
 }
@@ -18,11 +22,15 @@ fn dither_floyd_steinberg_benchmark(c: &mut Criterion) {
     let width = 1920;
     let height = 1080;
     let mut buf = vec![0u8; (width * height * 3) as usize];
-    let mut frame = Frame::new(width, height, &mut buf);
 
     c.bench_function("dither_floyd_steinberg", |b| {
         b.iter(|| {
-            dither::dither_frame_floyd_steinberg_color(black_box(&mut frame), black_box(2));
+            dither::dither_frame_floyd_steinberg_color(
+                black_box(width),
+                black_box(height),
+                black_box(&mut buf),
+                black_box(2),
+            );
         });
     });
 }

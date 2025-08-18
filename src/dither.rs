@@ -1,6 +1,8 @@
 use crate::frame::Frame;
 
-pub fn dither_frame_atkinson(frame: &mut Frame, palette_count: u8) {
+pub fn dither_frame_atkinson(width: isize, height: isize, buffer: &mut [u8], palette_count: u8) {
+    let mut frame = Frame::new(width, height, buffer);
+
     const PIXEL_OFFSETS: [(isize, isize); 6] = [(1, 0), (2, 0), (-1, 1), (0, 1), (1, 1), (0, 2)];
     let gap = quantize_gap(palette_count);
 
@@ -24,7 +26,14 @@ pub fn dither_frame_atkinson(frame: &mut Frame, palette_count: u8) {
     }
 }
 
-pub fn dither_frame_floyd_steinberg_color(frame: &mut Frame, palette_count: u8) {
+pub fn dither_frame_floyd_steinberg_color(
+    width: isize,
+    height: isize,
+    buffer: &mut [u8],
+    palette_count: u8,
+) {
+    let mut frame = Frame::new(width, height, buffer);
+
     const OFFSET_COEF: [((isize, isize), f32); 4] = [
         ((1, 0), 7.0 / 16.0),
         ((-1, 1), 3.0 / 16.0),
