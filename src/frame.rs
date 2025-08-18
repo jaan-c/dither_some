@@ -69,7 +69,7 @@ impl<'a> Frame<'a> {
     }
 
     fn coordinate_to_index(&self, x: isize, y: isize) -> Option<usize> {
-        if 0 <= x && x <= self.width && 0 <= y && y < self.height {
+        if 0 <= x && x < self.width && 0 <= y && y < self.height {
             Some(((y * self.width + x) * 3) as usize)
         } else {
             None
