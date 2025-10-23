@@ -1,3 +1,78 @@
+#[derive(Debug, Clone)]
+pub struct Resolution {
+    _width: isize,
+    _height: isize,
+}
+
+impl Resolution {
+    pub fn new(width: isize, height: isize) -> Resolution {
+        Resolution {
+            _width: width,
+            _height: height,
+        }
+    }
+
+    pub fn is_resolved(&self) -> bool {
+        self._width >= 0 && self._height >= 0
+    }
+
+    pub fn width(&self) -> Option<usize> {
+        if self._width >= 0 {
+            Some(self._width as usize)
+        } else {
+            None
+        }
+    }
+
+    pub fn height(&self) -> Option<usize> {
+        if self._height >= 0 {
+            Some(self._height as usize)
+        } else {
+            None
+        }
+    }
+
+    pub fn resolve_fields(&self, relative_to: Resolution) -> Result<Resolution, String> {
+        if !relative_to.is_resolved() {
+            return Err("relative_to has to be resolved".to_string());
+        }
+
+        let ratio = relative_to._width as f32 / relative_to._height as f32;
+
+        if self._width >= 0 && self._height >= 0 {
+            Ok(self.clone())
+        } else if self._width < 0 && self._height < 0 {
+            Err("Either field has to at least be positive.".to_string())
+        } else if self._width < 0 {
+            let resolved_width = self._height as f32 * ratio;
+            let resolved_width = match self._width {
+                -2 => round_even(resolved_width),
+                _ => resolved_width.round(),
+            };
+
+            Ok(Resolution {
+                _width: resolved_width as isize,
+                _height: self._height,
+            })
+        } else {
+            let resolved_height = self._width as f32 / ratio;
+            let resolved_height = match self._height {
+                -2 => round_even(resolved_height),
+                _ => resolved_height.round(),
+            };
+
+            Ok(Resolution {
+                _width: self._width,
+                _height: resolved_height as isize,
+            })
+        }
+    }
+}
+
+fn round_even(n: f32) -> f32 {
+    (n / 2.0).round() * 2.0
+}
+
 pub type GrayPixel = f32;
 pub type RgbPixel = (f32, f32, f32);
 

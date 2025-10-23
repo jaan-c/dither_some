@@ -1,15 +1,31 @@
 use std::io::{Read, Write};
 use std::process::{Child, ChildStdout, Command, Stdio};
 
-pub fn dither_frames_with<F>(input: &str, output: &str, dither_fn: F) -> Result<(), String>
+// TODO: Clean up parameter naming, possibly use struct for better labeling.
+// TODO: Parameterize the output video resolution, right now it's just using the
+//      size of the original video.
+pub fn dither_frames_with<F>(
+    input: &str,
+    output: &str,
+    dither_width: usize,
+    dither_height: usize,
+    dither_fn: F,
+) -> Result<(), String>
 where
     F: Fn(usize, usize, &mut [u8]),
 {
     let (width, height, frame_rate) = get_video_info(input)?;
 
     let mut frame_buf = vec![0u8; width * height * 3]; // *3 for RGB24
-    let mut frame_reader = spawn_frame_reader(input)?;
-    let mut frame_writer_child = spawn_frame_writer_child(width, height, frame_rate, output)?;
+    let mut frame_reader = spawn_frame_reader(input, dither_width, dither_height)?;
+    let mut frame_writer_child = spawn_frame_writer_child(
+        dither_width,
+        dither_height,
+        width,
+        height,
+        frame_rate,
+        output,
+    )?;
     let mut frame_writer = frame_writer_child
         .stdin
         .take()
@@ -32,10 +48,24 @@ where
     Ok(())
 }
 
-fn spawn_frame_reader(path: &str) -> Result<ChildStdout, String> {
+fn spawn_frame_reader(
+    path: &str,
+    output_width: usize,
+    output_height: usize,
+) -> Result<ChildStdout, String> {
     let mut child = Command::new("ffmpeg")
         .args(&[
-            "-v", "error", "-i", path, "-f", "rawvideo", "-pix_fmt", "rgb24", "-",
+            "-v",
+            "error",
+            "-i",
+            path,
+            "-vf",
+            &format!("scale={}:{}:flags=lanczos", output_width, output_height),
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "rgb24",
+            "-",
         ])
         .stdout(Stdio::piped())
         .spawn()
@@ -45,8 +75,10 @@ fn spawn_frame_reader(path: &str) -> Result<ChildStdout, String> {
 }
 
 fn spawn_frame_writer_child(
-    width: usize,
-    height: usize,
+    input_width: usize,
+    input_height: usize,
+    output_width: usize,
+    output_height: usize,
     frame_rate: f32,
     path: &str,
 ) -> Result<Child, String> {
@@ -59,11 +91,13 @@ fn spawn_frame_writer_child(
             "-pix_fmt",
             "rgb24",
             "-s",
-            &format!("{}x{}", width, height),
+            &format!("{}x{}", input_width, input_height),
             "-r",
             &frame_rate.to_string(),
             "-i",
             "-",
+            "-vf",
+            &format!("scale={}:{}:flags=neighbor", output_width, output_height),
             "-c:v",
             "libx264",
             "-pix_fmt",
