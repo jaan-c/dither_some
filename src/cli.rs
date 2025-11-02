@@ -31,13 +31,13 @@ pub struct CliArgs {
 pub enum CliAlgorithm {
     /// Apply Atkinson dithering algorithm.
     Atkinson {
-        #[arg(short, long, value_parser = clap::value_parser!(u32).range(2..=256))]
+        #[arg(short, long, value_parser = clap::value_parser!(u32).range(2..=256), default_value_t = 2)]
         palette_count: u32,
     },
 
     /// Apply colored Floyd-Steinberg dithering algorithm.
     FsColor {
-        #[arg(short, long, value_parser = clap::value_parser!(u32).range(2..=256))]
+        #[arg(short, long, value_parser = clap::value_parser!(u32).range(2..=256), default_value_t = 2)]
         palette_count: u32,
     },
 }
