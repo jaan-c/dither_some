@@ -1,6 +1,7 @@
 use clap::Parser;
 use libc::{SIGINT, SIGTERM, c_int, signal};
 use std::fs;
+use std::path;
 
 mod cli;
 mod dither;
@@ -19,9 +20,14 @@ fn main() {
 
     let args = cli::CliArgs::parse();
 
+    if path::Path::new(&args.output).exists() {
+        println!("Output '{}' already exists.", args.output);
+        return;
+    }
+
     let (input_w, input_h, _) = ffmpeg::get_video_info(&args.input).unwrap();
 
-    let temp_output_path = format!("dither_some_{}", args.output.clone());
+    let temp_output_path = format!("dither_some_{}", args.output);
     let input_res = frame::Resolution::new(input_w as isize, input_h as isize);
 
     let dither_res = match args.dither_res {
