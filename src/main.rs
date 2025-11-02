@@ -1,5 +1,7 @@
 use clap::Parser;
 use libc::{SIGINT, SIGTERM, c_int, signal};
+use rand;
+use rand::Rng;
 use std::fs;
 use std::path;
 
@@ -27,7 +29,7 @@ fn main() {
 
     let (input_w, input_h, _) = ffmpeg::get_video_info(&args.input).unwrap();
 
-    let temp_output_path = format!("dither_some_{}", args.output);
+    let temp_output_path = format!("dither_some_{}.mp4", rand_alphanum(8));
     let input_res = frame::Resolution::new(input_w as isize, input_h as isize);
 
     let dither_res = match args.dither_res {
@@ -71,4 +73,12 @@ fn main() {
     );
     let _ = fs::remove_file(temp_output_path);
     result.unwrap();
+}
+
+fn rand_alphanum(length: usize) -> String {
+    rand::rng()
+        .sample_iter(&rand::distr::Alphanumeric)
+        .take(length)
+        .map(char::from)
+        .collect()
 }
