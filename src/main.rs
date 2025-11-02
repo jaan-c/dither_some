@@ -2,9 +2,7 @@ use clap::Parser;
 use libc::{SIGINT, SIGTERM, c_int, signal};
 use std::fs;
 
-use crate::dither::{dither_frame_atkinson, dither_frame_floyd_steinberg_color};
-
-mod args;
+mod cli;
 mod dither;
 mod ffmpeg;
 mod frame;
@@ -19,35 +17,52 @@ fn main() {
         signal(SIGTERM, handle_signal as usize);
     }
 
-    let args = args::Args::parse();
-    let temp_output = &format!("dither_some_{}", args.output);
-    let actual_res = args.actual_res.unwrap();
+    let args = cli::CliArgs::parse();
 
-    if let Err(e) = ffmpeg::dither_frames_with(
-        &args.input,
-        &temp_output,
-        actual_res.width(),
-        actual_res.height(),
-        |width, height, buffer| {
-            let (width, height) = (width as isize, height as isize);
+    let (input_w, input_h, _) = ffmpeg::get_video_info(&args.input).unwrap();
 
-            match args.algorithm {
-                args::Algorithm::Atkinson => {
-                    dither_frame_atkinson(width, height, buffer, args.palette_count)
-                }
-                args::Algorithm::FsColor => {
-                    dither_frame_floyd_steinberg_color(width, height, buffer, args.palette_count)
-                }
+    let temp_output_path = format!("dither_some_{}", args.output.clone());
+    let input_res = frame::Resolution::new(input_w as isize, input_h as isize);
+
+    let dither_res = match args.dither_res {
+        Some(dither_res) => dither_res.resolve_fields(&input_res).unwrap(),
+        None => input_res.clone(),
+    };
+    let output_res = match args.output_res {
+        Some(output_res) => output_res.resolve_fields(&input_res).unwrap(),
+        None => input_res.clone(),
+    };
+    let dither_algo_opts = match args.algorithm {
+        cli::CliAlgorithm::Atkinson { palette_count } => {
+            dither::DitherAlgoOpts::Atkinson {
+                palette_count: palette_count,
             }
-        },
-    ) {
-        let _ = fs::remove_file(temp_output);
+        }
+        cli::CliAlgorithm::FsColor { palette_count } => {
+            dither::DitherAlgoOpts::FsColor {
+                palette_count: palette_count,
+            }
+        }
+    };
+    let dither_opts = dither::DitherOpts {
+        dither_res: dither_res,
+        output_res: output_res,
+        input_path: args.input.clone(),
+        output_path: temp_output_path.clone(),
+        algo: dither_algo_opts,
+    };
+
+    if let Err(e) = dither::dither_video(dither_opts) {
+        let _ = fs::remove_file(temp_output_path);
         eprint!("{}", e);
         return;
     }
 
-    let result =
-        ffmpeg::copy_streams_or_aac_transcode_audio(&temp_output, &args.input, &args.output);
-    let _ = fs::remove_file(temp_output);
+    let result = ffmpeg::copy_streams_or_aac_transcode_audio(
+        &temp_output_path,
+        &args.input,
+        &args.output,
+    );
+    let _ = fs::remove_file(temp_output_path);
     result.unwrap();
 }

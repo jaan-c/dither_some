@@ -16,23 +16,26 @@ impl Resolution {
         self._width >= 0 && self._height >= 0
     }
 
-    pub fn width(&self) -> Option<usize> {
+    pub fn width(&self) -> Option<isize> {
         if self._width >= 0 {
-            Some(self._width as usize)
+            Some(self._width)
         } else {
             None
         }
     }
 
-    pub fn height(&self) -> Option<usize> {
+    pub fn height(&self) -> Option<isize> {
         if self._height >= 0 {
-            Some(self._height as usize)
+            Some(self._height)
         } else {
             None
         }
     }
 
-    pub fn resolve_fields(&self, relative_to: Resolution) -> Result<Resolution, String> {
+    pub fn resolve_fields(
+        &self,
+        relative_to: &Resolution,
+    ) -> Result<Resolution, String> {
         if !relative_to.is_resolved() {
             return Err("relative_to has to be resolved".to_string());
         }
@@ -139,7 +142,12 @@ impl<'a> Frame<'a> {
         }
     }
 
-    pub fn set_gray(&mut self, x: isize, y: isize, new_gray: GrayPixel) -> bool {
+    pub fn set_gray(
+        &mut self,
+        x: isize,
+        y: isize,
+        new_gray: GrayPixel,
+    ) -> bool {
         self.set_rgb(x, y, (new_gray, new_gray, new_gray))
     }
 

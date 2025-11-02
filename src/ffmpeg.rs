@@ -1,57 +1,9 @@
-use std::io::{Read, Write};
 use std::process::{Child, ChildStdout, Command, Stdio};
 
-// TODO: Clean up parameter naming, possibly use struct for better labeling.
-// TODO: Parameterize the output video resolution, right now it's just using the
-//      size of the original video.
-pub fn dither_frames_with<F>(
-    input: &str,
-    output: &str,
-    dither_width: usize,
-    dither_height: usize,
-    dither_fn: F,
-) -> Result<(), String>
-where
-    F: Fn(usize, usize, &mut [u8]),
-{
-    let (width, height, frame_rate) = get_video_info(input)?;
-
-    let mut frame_buf = vec![0u8; width * height * 3]; // *3 for RGB24
-    let mut frame_reader = spawn_frame_reader(input, dither_width, dither_height)?;
-    let mut frame_writer_child = spawn_frame_writer_child(
-        dither_width,
-        dither_height,
-        width,
-        height,
-        frame_rate,
-        output,
-    )?;
-    let mut frame_writer = frame_writer_child
-        .stdin
-        .take()
-        .expect("Expected stdin to be present");
-
-    loop {
-        if let Ok(_) = frame_reader.read_exact(&mut frame_buf) {
-            dither_fn(width, height, &mut frame_buf);
-            frame_writer
-                .write_all(&frame_buf)
-                .map_err(|e| format!("Writing frame buffer failed: {}", e))?;
-        } else {
-            // EOF, signal to ffmpeg we're done so it can properly finalize the output.
-            drop(frame_writer);
-            frame_writer_child.wait().unwrap();
-            break;
-        }
-    }
-
-    Ok(())
-}
-
-fn spawn_frame_reader(
+pub fn spawn_frame_reader(
     path: &str,
-    output_width: usize,
-    output_height: usize,
+    output_width: isize,
+    output_height: isize,
 ) -> Result<ChildStdout, String> {
     let mut child = Command::new("ffmpeg")
         .args(&[
@@ -74,11 +26,11 @@ fn spawn_frame_reader(
     Ok(child.stdout.take().expect("Expected stdout to be present"))
 }
 
-fn spawn_frame_writer_child(
-    input_width: usize,
-    input_height: usize,
-    output_width: usize,
-    output_height: usize,
+pub fn spawn_frame_writer_child(
+    input_width: isize,
+    input_height: isize,
+    output_width: isize,
+    output_height: isize,
     frame_rate: f32,
     path: &str,
 ) -> Result<Child, String> {
@@ -113,7 +65,7 @@ fn spawn_frame_writer_child(
 }
 
 /// Get width, height and frame rate of a video.
-fn get_video_info(path: &str) -> Result<(usize, usize, f32), String> {
+pub fn get_video_info(path: &str) -> Result<(usize, usize, f32), String> {
     let output = Command::new("ffprobe")
         .args(&[
             "-v",
@@ -140,11 +92,13 @@ fn get_video_info(path: &str) -> Result<(usize, usize, f32), String> {
         return Err(format!("ffprobe exited with {}: {}", reason, stderr));
     }
 
-    let stdout = str::from_utf8(&output.stdout)
-        .map_err(|e| format!("ffprobe yielded an invalid UTF-8 output: {}", e))?;
+    let stdout = str::from_utf8(&output.stdout).map_err(|e| {
+        format!("ffprobe yielded an invalid UTF-8 output: {}", e)
+    })?;
     let lines: Vec<&str> = stdout.lines().collect();
     let width: usize = lines[0].parse().map_err(|_| "Parsing width failed")?;
-    let height: usize = lines[1].parse().map_err(|_| "Parsing height failed")?;
+    let height: usize =
+        lines[1].parse().map_err(|_| "Parsing height failed")?;
     let frame_rate = {
         let parts: Vec<&str> = lines[2].split("/").collect();
         let (num, denom): (f32, f32) = (
@@ -169,8 +123,8 @@ pub fn copy_streams_or_aac_transcode_audio(
 ) -> Result<(), String> {
     let status = Command::new("ffmpeg")
         .args(&[
-            "-v", "error", "-i", src_video, "-i", src_audio, "-c:v", "copy", "-c:a", "copy",
-            "-map", "0:v:0", "-map", "1:a:0", "-n", dest,
+            "-v", "error", "-i", src_video, "-i", src_audio, "-c:v", "copy",
+            "-c:a", "copy", "-map", "0:v:0", "-map", "1:a:0", "-n", dest,
         ])
         .status()
         .map_err(|e| format!("ffmpeg failed to start: {}", e))?;
@@ -178,8 +132,9 @@ pub fn copy_streams_or_aac_transcode_audio(
     if !status.success() {
         let output = Command::new("ffmpeg")
             .args(&[
-                "-v", "error", "-i", src_video, "-i", src_audio, "-c:v", "copy", "-c:a", "copy",
-                "-map", "0:v:0", "-map", "1:a:0", "-n", dest,
+                "-v", "error", "-i", src_video, "-i", src_audio, "-c:v",
+                "copy", "-c:a", "copy", "-map", "0:v:0", "-map", "1:a:0", "-n",
+                dest,
             ])
             .output()
             .map_err(|e| format!("ffmpeg fallback failed to start: {}", e))?;
